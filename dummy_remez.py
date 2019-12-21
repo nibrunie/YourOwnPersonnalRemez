@@ -5,18 +5,6 @@ import fpylll
 import numpy as np
 import matplotlib.pyplot as plt
 
-#function = lambda x: bigfloat.exp(x)
-
-
-#poly_degree = 4
-#NUM_POINT = 100
-#interval_lo = 0.001
-#interval_hi = 0.5
-
-#epsilon = 0.01
-
-
-#interval_size = interval_hi - interval_lo
 
 def cheb_root(degree, index, interval=(-1, 1)):
     """ Return the index root of a chebyshev polynomial of degree degree
@@ -62,7 +50,10 @@ def get_random_interval_pt(interval):
 
 
 def generate_approx(function, interval, NUM_POINT=100, poly_degree=4, epsilon=0.01, precision=53):
-    #input_value = sorted([get_random_interval_pt() for i in range(NUM_POINT)])
+    """ Using Closest Vector Problem, generates a polynomial approximation of
+        degree  poly_degree of function over interval """
+    # point value to minimize polynomial - function distance
+    # are chebyshev extrema
     input_value = [cheb_extrema(NUM_POINT, i, interval) for i in range(NUM_POINT)]
     input_value = sorted(input_value)
     print("input_value={}".format(input_value))
@@ -118,14 +109,16 @@ def generate_approx(function, interval, NUM_POINT=100, poly_degree=4, epsilon=0.
 
     return poly_coeff
 
-def vector_eval(vector, value):
+def poly_eval(poly_coeff, value):
+    """ Evaluate polynomial defined by poly_coeff list of
+        coefficient numerical value at value """
     acc = 0
-    for i, c in enumerate(vector):
+    for i, c in enumerate(poly_coeff):
         acc += c * value**i
     return acc
 
 def eval_poly_vs_fct(poly_coeff, function, test_values):
-    diff = max(vector_eval(poly_coeff, v) - function(v) for v in test_values)
+    diff = max(abs(poly_eval(poly_coeff, v) - function(v)) for v in test_values)
     return diff
 
 
@@ -149,7 +142,7 @@ if __name__ == "__main__":
 
     x = np.linspace(interval_lo, interval_hi, 100)
     tanh_y = np.array([func(v) for v in x])
-    poly_y = np.array([vector_eval(poly_coeff, v) for v in x])
+    poly_y = np.array([poly_eval(poly_coeff, v) for v in x])
     error_y = tanh_y - poly_y
 
 
