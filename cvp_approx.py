@@ -107,34 +107,97 @@ def generate_approx(function, interval, NUM_POINT=100, poly_degree=4, epsilon=0.
     poly_coeff = [v for v in np.linalg.lstsq(M, b)[0]]
     print("poly_coeff: ", poly_coeff)
 
-    return poly_coeff
+    return Polynomial(poly_coeff)
 
-def poly_eval(poly_coeff, value):
-    """ Evaluate polynomial defined by poly_coeff list of
-        coefficient numerical value at value """
-    acc = 0
-    for i, c in enumerate(poly_coeff):
-        acc += c * value**i
-    return acc
 
-def eval_poly_vs_fct(poly_coeff, function, test_values):
-    diff = max(abs(poly_eval(poly_coeff, v) - function(v)) for v in test_values)
+
+class Function:
+    def __init__(self, func):
+        self.func = func
+
+    def __call__(self, x):
+        return self.func(x)
+
+    def __sub__(self, func):
+        return Function(lambda x: (self(x) - func(x)))
+    def __add__(self, func):
+        return Function(lambda x: (self(x) + func(x)))
+    def __abs__(self):
+        return Function(lambda x: (abs(self(x))))
+
+    def derivate(self, u=0.0001):
+        return Function(lambda x: (self(x+u) - self(x)) / u)
+
+class Polynomial(Function):
+    def __init__(self, coeff_vector):
+        self.coeff_vector = coeff_vector
+
+    def eval(self, x):
+        """ Evaluate polynomial defined by poly_coeff list of
+            coefficient numerical value at value """
+        acc = 0
+        for i, c in enumerate(self.coeff_vector):
+            acc += c * x**i
+        return acc
+
+    def __call__(self, x):
+        return self.eval(x)
+
+    def derivate(self, u = None):
+        return Polynomial([v * (i + 1) for i, v in enumerate(self.coeff_vector[1:])])
+
+def eval_poly_vs_fct(poly, function, test_values):
+    diff = max(abs(poly(v) - function(v)) for v in test_values)
     return diff
 
 
+def find_zeros(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
+    start_u = min_dist
+    lo, hi = interval
+    size = hi - lo
+    x = lo
+    zeros = []
+    while x <= hi:
+        u = start_u
+        while abs(fct(x)) > delta and x < hi:
+            if fct(x+u) * fct(x) < 0:
+                # opposite sign means at least one zero in between
+                # because we assume fct is contiguous
+                u /= 2.0
+            else:
+                x += u
+        if abs(fct(x)) < delta:
+            print("zero found at {}".format(x))
+            zeros.append(x)
+        x += start_u
+    return zeros
+
+def find_extremas(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
+    derivative = fct.derivate()
+    return find_zeros(derivative, interval, start_pts, min_dist, delta)
+
+
 if __name__ == "__main__":
-    func = lambda x: bigfloat.exp(x)
-    interval_lo, interval_hi = 0.01, 0.5
+    func = Function(lambda x: bigfloat.cos(x))
+    interval_lo, interval_hi = 0.0, 0.125
     interval = interval_lo, interval_hi
     # generating coefficients of polynomial approximation
-    poly_coeff = generate_approx(func, interval)
+    poly = generate_approx(func, interval, NUM_POINT=120, precision=60, poly_degree=8)
 
     # evaluating polynomial approximation on random points
     NUM_TEST_PTS = 10
     print("testing on {} random points on the interval".format(NUM_TEST_PTS))
-    max_diff = eval_poly_vs_fct(poly_coeff, func, (get_random_interval_pt(interval) for i in range(NUM_TEST_PTS)))
+    max_diff = eval_poly_vs_fct(poly, func, (get_random_interval_pt(interval) for i in range(NUM_TEST_PTS)))
     print("max_diff is {}".format(max_diff))
 
+    zeros = find_zeros(poly - func, interval, min_dist=0.0001, delta=1e-10)
+    print("zeros=", zeros)
+    extremas = find_extremas((poly - func), interval, min_dist=0.0001, delta=1e-10)
+    print("extremas=", extremas)
+    max_diff = max(abs((poly - func)(x)) for x in extremas)
+    print("max_diff=", max_diff)
+    max_diff = max(abs((poly - func)(x)) for x in [interval_lo, interval_hi])
+    print("max_diff=", max_diff)
 
     # graphical representation
     fig = plt.figure()  # an empty figure with no axes
@@ -142,13 +205,13 @@ if __name__ == "__main__":
 
     x = np.linspace(interval_lo, interval_hi, 100)
     tanh_y = np.array([func(v) for v in x])
-    poly_y = np.array([poly_eval(poly_coeff, v) for v in x])
+    poly_y = np.array([poly(v) for v in x])
     error_y = tanh_y - poly_y
 
 
     plt.plot(x, tanh_y, label='tanh')
     plt.plot(x, poly_y, label='poly')
-    plt.plot(x, error_y, label='error')
+    # plt.plot(x, error_y, label='error')
 
     plt.title("Simple Plot")
 
