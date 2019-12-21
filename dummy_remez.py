@@ -8,21 +8,26 @@ import matplotlib.pyplot as plt
 function = lambda x: bigfloat.tanh(x)
 
 
-for i in range(10):
-    value = random.random()
-    print(value, function(value))
-
 poly_degree = 8
-NUM_POINT = poly_degree + 1
+NUM_POINT = 10
 interval_lo = 1.0
 interval_hi = 1.05
 
+epsilon = 0.01
+
 interval_size = interval_hi - interval_lo
+
+def cheb_root(degree, index):
+    return (interval_lo + interval_hi) / 2 + interval_size * 0.5 * bigfloat.cos(bigfloat.const_pi() * (index + 0.5) / bigfloat.BigFloat(degree))
+def cheb_extrema(degree, index):
+    return (interval_lo + interval_hi) / 2 + interval_size * 0.5 * bigfloat.cos(bigfloat.const_pi() * index / bigfloat.BigFloat(degree))
 
 def get_random_interval_pt():
     return interval_lo + interval_size * random.random()
 
-input_value = sorted([get_random_interval_pt() for i in range(NUM_POINT)])
+#input_value = sorted([get_random_interval_pt() for i in range(NUM_POINT)])
+input_value = [cheb_extrema(NUM_POINT, i) for i in range(NUM_POINT)]
+input_value = sorted(input_value)
 print("input_value={}".format(input_value))
 
 # as tanh is increasing we can get min/max
@@ -39,17 +44,17 @@ def int_conv(x):
 def back_conv(x):
     return x / factor
 
-target_vector = [function(x) for x in input_value]
+target_vector = [function(x) for i, x in enumerate(input_value)]
 
-matrix = fpylll.IntegerMatrix(NUM_POINT, poly_degree+1)
-np_matrix = np.zeros((NUM_POINT, poly_degree+1))
+matrix = fpylll.IntegerMatrix(poly_degree + 1, NUM_POINT)
+np_matrix = np.zeros((poly_degree + 1, NUM_POINT))
 
 # each column contains the i-th power of the input row
 for row in range(NUM_POINT):
     for col in range(poly_degree+1):
         coeff = int_conv(input_value[row]**col)
-        matrix[row, col] = coeff
-        np_matrix[row, col] = coeff
+        matrix[col, row] = coeff
+        np_matrix[col, row] = coeff
 print(matrix)
 
 reduced_matrix = fpylll.IntegerMatrix(matrix)
@@ -58,6 +63,7 @@ fpylll.LLL.reduction(reduced_matrix)
 print(reduced_matrix)
 
 conv_target = [int_conv(v) for v in target_vector]
+print("conv_target=", conv_target)
 
 closest_vector = fpylll.CVP.closest_vector(reduced_matrix, conv_target)
 print("closest vector: ", closest_vector)
@@ -66,7 +72,11 @@ print("distance : ", back_conv(max(abs(a - b) for a, b in zip(closest_vector, co
 #poly_coeff = [back_conv(v) for v in closest_vector]
 
 b = np.array(closest_vector)
-poly_coeff = [v for v in np.linalg.solve(np_matrix, b)]
+M = np_matrix.transpose()
+print("M=", M)
+print("b=", b)
+
+poly_coeff = [v for v in np.linalg.lstsq(M, b)[0]]
 print("poly_coeff: ", poly_coeff)
 
 def vector_eval(vector, value):
