@@ -18,11 +18,34 @@ epsilon = 0.01
 interval_size = interval_hi - interval_lo
 
 def cheb_root(degree, index):
+    """ Return the index root of a chebyshev polynomial of degree degree
+
+        :param degree: Chebyshev polynomial degree
+        :type degree: int
+        :param index: index of the root to be returned
+        :type index: int
+        :return: index-th root of the degree-th Chebyshev polynomial
+        :retype: bigfloat.BigFloat
+    """
     return (interval_lo + interval_hi) / 2 + interval_size * 0.5 * bigfloat.cos(bigfloat.const_pi() * (index + 0.5) / bigfloat.BigFloat(degree))
 def cheb_extrema(degree, index):
+    """ Return the index-th extrream of a chebyshev polynomial of degree degree
+
+        :param degree: Chebyshev polynomial degree
+        :type degree: int
+        :param index: index of the extrema to be returned
+        :type index: int
+        :return: index-th extrema of the degree-th Chebyshev polynomial
+        :retype: bigfloat.BigFloat
+    """
     return (interval_lo + interval_hi) / 2 + interval_size * 0.5 * bigfloat.cos(bigfloat.const_pi() * index / bigfloat.BigFloat(degree))
 
 def get_random_interval_pt():
+    """ generate a random point within [interval_lo, interval_hi]
+
+        :return: random value in [interval_lo, interval_hi]
+        :rtype: float
+    """
     return interval_lo + interval_size * random.random()
 
 #input_value = sorted([get_random_interval_pt() for i in range(NUM_POINT)])
