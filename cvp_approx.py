@@ -49,14 +49,13 @@ def get_random_interval_pt(interval):
     return lo + size * random.random()
 
 
-def generate_approx(function, interval, NUM_POINT=100, poly_degree=4, epsilon=0.01, precision=53):
+def generate_approx_cvp(function, interval, NUM_POINT=100, poly_degree=4, epsilon=0.01, precision=53):
     """ Using Closest Vector Problem, generates a polynomial approximation of
         degree  poly_degree of function over interval """
     # point value to minimize polynomial - function distance
     # are chebyshev extrema
     input_value = [cheb_extrema(NUM_POINT, i, interval) for i in range(NUM_POINT)]
     input_value = sorted(input_value)
-    print("input_value={}".format(input_value))
 
     # as tanh is increasing we can get min/max
     # by looking at function value at interval bounds
@@ -82,30 +81,23 @@ def generate_approx(function, interval, NUM_POINT=100, poly_degree=4, epsilon=0.
             coeff = int_conv(input_value[row]**col)
             matrix[col, row] = coeff
             np_matrix[col, row] = coeff
-    print(matrix)
 
     reduced_matrix = fpylll.IntegerMatrix(matrix)
 
     # reducing matrix to simplify CVP search
     fpylll.LLL.reduction(reduced_matrix)
-    print(reduced_matrix)
 
     conv_target = [int_conv(v) for v in target_vector]
-    print("conv_target=", conv_target)
 
     closest_vector = fpylll.CVP.closest_vector(reduced_matrix, conv_target)
-    print("closest vector: ", closest_vector)
     print("distance : ", back_conv(max(abs(a - b) for a, b in zip(closest_vector, conv_target))))
 
     #poly_coeff = [back_conv(v) for v in closest_vector]
 
     b = np.array(closest_vector)
     M = np_matrix.transpose()
-    print("M=", M)
-    print("b=", b)
 
     poly_coeff = [v for v in np.linalg.lstsq(M, b)[0]]
-    print("poly_coeff: ", poly_coeff)
 
     return Polynomial(poly_coeff)
 
@@ -167,7 +159,6 @@ def find_zeros(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
             else:
                 x += u
         if abs(fct(x)) < delta:
-            print("zero found at {}".format(x))
             zeros.append(x)
         x += start_u
     return zeros
@@ -199,6 +190,7 @@ if __name__ == "__main__":
     max_diff = max(abs((poly - func)(x)) for x in [interval_lo, interval_hi])
     print("max_diff=", max_diff)
 
+
     # graphical representation
     fig = plt.figure()  # an empty figure with no axes
     fig.suptitle('No axes on this figure')  # Add a title so we know which it is
@@ -210,7 +202,7 @@ if __name__ == "__main__":
 
 
     plt.plot(x, tanh_y, label='tanh')
-    plt.plot(x, poly_y, label='poly')
+    plt.plot(x, poly_y, label='poly_cvp')
     # plt.plot(x, error_y, label='error')
 
     plt.title("Simple Plot")
