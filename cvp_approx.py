@@ -102,6 +102,29 @@ def generate_approx_cvp(function, interval, NUM_POINT=100, poly_degree=4, epsilo
     return Polynomial(poly_coeff)
 
 
+def generate_approx_remez(function, interval, poly_degree=4, epsilon=0.01, precision=53, num_iter=1):
+    NUM_POINT = poly_degree + 1
+    input_value = [cheb_extrema(NUM_POINT, i, interval) for i in range(NUM_POINT)]
+    input_value = sorted(input_value)
+
+    for iter_id in range(num_iter):
+        target_vector = np.asarray([function(x) + (-1)**(i+1) * epsilon for i, x in enumerate(input_value)], dtype='float')
+
+        # current problem definition is using float or exact values
+
+        np_matrix = np.zeros((NUM_POINT, poly_degree + 1), dtype='float')
+        for row in range(NUM_POINT):
+            for col in range(poly_degree +1):
+                np_matrix[row][col] = input_value[row]**col
+
+        lstsq_solution = np.linalg.solve(np_matrix, target_vector)
+        poly_coeff = [v for v in lstsq_solution]
+
+        poly = Polynomial(poly_coeff)
+        if iter_id + 1 < num_iter:
+            extremas = find_extremas(poly - func, interval, min_dist=0.0001, delta=1e-8)
+            input_value = [interval[0]] + sorted(extremas) + [interval[1]]
+    return poly
 
 class Function:
     def __init__(self, func):
@@ -172,11 +195,26 @@ if __name__ == "__main__":
     func = Function(lambda x: bigfloat.cos(x))
     interval_lo, interval_hi = 0.0, 0.125
     interval = interval_lo, interval_hi
+    NUM_TEST_PTS = 10
+
+
+    # remez method
+    poly_remez_1 = generate_approx_remez(func, interval, poly_degree=8, epsilon=1e-6)
+    poly_remez_3 = generate_approx_remez(func, interval, poly_degree=8, epsilon=1e-6, num_iter=3)
+    poly_remez_5 = generate_approx_remez(func, interval, poly_degree=8, epsilon=1e-6, num_iter=5)
+    print("testing on {} random points on the interval".format(NUM_TEST_PTS))
+    max_diff = eval_poly_vs_fct(poly_remez_1, func, (get_random_interval_pt(interval) for i in range(NUM_TEST_PTS)))
+    print("max_diff is {}".format(max_diff))
+    max_diff = eval_poly_vs_fct(poly_remez_3, func, (get_random_interval_pt(interval) for i in range(NUM_TEST_PTS)))
+    print("max_diff is {}".format(max_diff))
+    max_diff = eval_poly_vs_fct(poly_remez_5, func, (get_random_interval_pt(interval) for i in range(NUM_TEST_PTS)))
+    print("max_diff is {}".format(max_diff))
+
+
     # generating coefficients of polynomial approximation
-    poly = generate_approx(func, interval, NUM_POINT=120, precision=60, poly_degree=8)
+    poly = generate_approx_cvp(func, interval, NUM_POINT=120, precision=60, poly_degree=8)
 
     # evaluating polynomial approximation on random points
-    NUM_TEST_PTS = 10
     print("testing on {} random points on the interval".format(NUM_TEST_PTS))
     max_diff = eval_poly_vs_fct(poly, func, (get_random_interval_pt(interval) for i in range(NUM_TEST_PTS)))
     print("max_diff is {}".format(max_diff))
@@ -198,11 +236,17 @@ if __name__ == "__main__":
     x = np.linspace(interval_lo, interval_hi, 100)
     tanh_y = np.array([func(v) for v in x])
     poly_y = np.array([poly(v) for v in x])
+    poly_remez_1_y = np.array([poly_remez_1(v) for v in x])
+    poly_remez_3_y = np.array([poly_remez_3(v) for v in x])
+    poly_remez_5_y = np.array([poly_remez_5(v) for v in x])
     error_y = tanh_y - poly_y
 
 
     plt.plot(x, tanh_y, label='tanh')
     plt.plot(x, poly_y, label='poly_cvp')
+    plt.plot(x, poly_remez_1_y, label='poly_remez_1')
+    plt.plot(x, poly_remez_3_y, label='poly_remez_3')
+    plt.plot(x, poly_remez_5_y, label='poly_remez_5')
     # plt.plot(x, error_y, label='error')
 
     plt.title("Simple Plot")
