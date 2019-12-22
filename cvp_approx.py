@@ -190,6 +190,9 @@ def find_extremas(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
     derivative = fct.derivate()
     return find_zeros(derivative, interval, start_pts, min_dist, delta)
 
+def dirty_supnorm(fct, interval, min_dist=0.01, delta=0.000001):
+    return max(abs(fct(v)) for v in list(interval) + find_extremas(fct, interval, min_dist=min_dist, delta=delta))
+
 
 if __name__ == "__main__":
     func = Function(lambda x: bigfloat.cos(x))
@@ -197,37 +200,25 @@ if __name__ == "__main__":
     interval = interval_lo, interval_hi
     NUM_TEST_PTS = 10
 
+    POLY_DEGREE = 5
+
 
     # remez method
-    poly_remez_1 = generate_approx_remez(func, interval, poly_degree=8, epsilon=1e-6)
-    poly_remez_3 = generate_approx_remez(func, interval, poly_degree=8, epsilon=1e-6, num_iter=3)
-    poly_remez_5 = generate_approx_remez(func, interval, poly_degree=8, epsilon=1e-6, num_iter=5)
-    print("testing on {} random points on the interval".format(NUM_TEST_PTS))
-    max_diff = eval_poly_vs_fct(poly_remez_1, func, (get_random_interval_pt(interval) for i in range(NUM_TEST_PTS)))
-    print("max_diff is {}".format(max_diff))
-    max_diff = eval_poly_vs_fct(poly_remez_3, func, (get_random_interval_pt(interval) for i in range(NUM_TEST_PTS)))
-    print("max_diff is {}".format(max_diff))
-    max_diff = eval_poly_vs_fct(poly_remez_5, func, (get_random_interval_pt(interval) for i in range(NUM_TEST_PTS)))
-    print("max_diff is {}".format(max_diff))
+    poly_remez_1 = generate_approx_remez(func, interval, poly_degree=POLY_DEGREE, epsilon=1e-6)
+    poly_remez_3 = generate_approx_remez(func, interval, poly_degree=POLY_DEGREE, epsilon=1e-6, num_iter=3)
+    poly_remez_5 = generate_approx_remez(func, interval, poly_degree=POLY_DEGREE, epsilon=1e-6, num_iter=5)
+
+    print("max_diff for remez 1 is ", dirty_supnorm(poly_remez_1 - func, interval))
+    print("max_diff for remez 3 is ", dirty_supnorm(poly_remez_3 - func, interval))
+    print("max_diff for remez 5 is ", dirty_supnorm(poly_remez_5 - func, interval))
+
 
 
     # generating coefficients of polynomial approximation
-    poly = generate_approx_cvp(func, interval, NUM_POINT=120, precision=60, poly_degree=8)
-
-    # evaluating polynomial approximation on random points
-    print("testing on {} random points on the interval".format(NUM_TEST_PTS))
-    max_diff = eval_poly_vs_fct(poly, func, (get_random_interval_pt(interval) for i in range(NUM_TEST_PTS)))
-    print("max_diff is {}".format(max_diff))
-
-    zeros = find_zeros(poly - func, interval, min_dist=0.0001, delta=1e-10)
-    print("zeros=", zeros)
-    extremas = find_extremas((poly - func), interval, min_dist=0.0001, delta=1e-10)
-    print("extremas=", extremas)
-    max_diff = max(abs((poly - func)(x)) for x in extremas)
-    print("max_diff=", max_diff)
-    max_diff = max(abs((poly - func)(x)) for x in [interval_lo, interval_hi])
-    print("max_diff=", max_diff)
-
+    poly_cvp_1 = generate_approx_cvp(func, interval, NUM_POINT=200, precision=60, poly_degree=POLY_DEGREE)
+    poly_cvp_2 = generate_approx_cvp(func, interval, NUM_POINT=120, precision=40, poly_degree=POLY_DEGREE)
+    print("max_diff for poly_cvp_1 is", dirty_supnorm(poly_cvp_1 - func, interval))
+    print("max_diff for poly_cvp_2 is", dirty_supnorm(poly_cvp_2 - func, interval))
 
     # graphical representation
     fig = plt.figure()  # an empty figure with no axes
@@ -235,15 +226,16 @@ if __name__ == "__main__":
 
     x = np.linspace(interval_lo, interval_hi, 100)
     tanh_y = np.array([func(v) for v in x])
-    poly_y = np.array([poly(v) for v in x])
+    poly_cvp_1_y = np.array([poly_cvp_1(v) for v in x])
+    poly_cvp_2_y = np.array([poly_cvp_2(v) for v in x])
     poly_remez_1_y = np.array([poly_remez_1(v) for v in x])
     poly_remez_3_y = np.array([poly_remez_3(v) for v in x])
     poly_remez_5_y = np.array([poly_remez_5(v) for v in x])
-    error_y = tanh_y - poly_y
 
 
     plt.plot(x, tanh_y, label='tanh')
-    plt.plot(x, poly_y, label='poly_cvp')
+    plt.plot(x, poly_cvp_1_y, label='poly_cvp_1')
+    plt.plot(x, poly_cvp_2_y, label='poly_cvp_2')
     plt.plot(x, poly_remez_1_y, label='poly_remez_1')
     plt.plot(x, poly_remez_3_y, label='poly_remez_3')
     plt.plot(x, poly_remez_5_y, label='poly_remez_5')
