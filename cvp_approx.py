@@ -143,10 +143,15 @@ def generate_approx_cvp(function, interval, NUM_POINT=100, poly_conditionner=Non
     return poly_conditionner.build_poly_from_coeff_list(poly_coeff)
 
 
-def generate_approx_remez(function, interval, poly_degree=4, epsilon=0.01, precision=53, num_iter=1):
+def generate_approx_remez(function, interval, poly_conditionner=None, epsilon=0.01, precision=53, num_iter=1):
     """ Using Remez method find an approximation polynoial of function over
         interval whose degree is poly_defree and whose absolute error is less
         or equal to epsilon """
+    poly_conditionner = poly_conditionner or PolyDegreeConditionner(4)
+    poly_degree = poly_conditionner.get_max_index()
+    poly_index_list = poly_conditionner.get_index_list()
+    POLY_SIZE = len(poly_index_list)
+
     NUM_POINT = poly_degree + 1
     input_value = [cheb_extrema(NUM_POINT, i, interval) for i in range(NUM_POINT)]
     input_value = sorted(input_value)
@@ -156,15 +161,19 @@ def generate_approx_remez(function, interval, poly_degree=4, epsilon=0.01, preci
 
         # current problem definition is using float or exact values
 
-        np_matrix = np.zeros((NUM_POINT, poly_degree + 1), dtype='float')
+        np_matrix = np.zeros((NUM_POINT, POLY_SIZE), dtype='float')
         for row in range(NUM_POINT):
-            for col in range(poly_degree +1):
-                np_matrix[row][col] = input_value[row]**col
+            for col, power in enumerate(poly_index_list):
+                np_matrix[row][col] = input_value[row]**power
 
-        lstsq_solution = np.linalg.solve(np_matrix, target_vector)
+        if POLY_SIZE == poly_degree + 1:
+            lstsq_solution = np.linalg.solve(np_matrix, target_vector)
+        else:
+            lstsq_solution = np.linalg.lstsq(np_matrix, target_vector)
         poly_coeff = [v for v in lstsq_solution]
+        print("remez poly_coeff=", poly_coeff)
 
-        poly = Polynomial(poly_coeff)
+        poly = poly_conditionner.build_poly_from_coeff_list(poly_coeff)
         if iter_id + 1 < num_iter:
             extremas = find_extremas(poly - function, interval, min_dist=0.0001, delta=1e-8)
             input_value = [interval[0]] + sorted(extremas) + [interval[1]]
