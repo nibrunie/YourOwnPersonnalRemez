@@ -57,10 +57,9 @@ def generate_approx_cvp(function, interval, NUM_POINT=100, poly_degree=4, epsilo
     input_value = [cheb_extrema(NUM_POINT, i, interval) for i in range(NUM_POINT)]
     input_value = sorted(input_value)
 
-    # as tanh is increasing we can get min/max
-    # by looking at function value at interval bounds
-    min_value = function(input_value[0])
-    max_value = function(input_value[-1])
+    target_vector = [function(x) for i, x in enumerate(input_value)]
+
+    min_value = min(abs(v) for v in target_vector)
 
     factor = 2**precision / min_value
 
@@ -70,7 +69,6 @@ def generate_approx_cvp(function, interval, NUM_POINT=100, poly_degree=4, epsilo
     def back_conv(x):
         return x / factor
 
-    target_vector = [function(x) for i, x in enumerate(input_value)]
 
     matrix = fpylll.IntegerMatrix(poly_degree + 1, NUM_POINT)
     np_matrix = np.zeros((poly_degree + 1, NUM_POINT))
@@ -103,6 +101,9 @@ def generate_approx_cvp(function, interval, NUM_POINT=100, poly_degree=4, epsilo
 
 
 def generate_approx_remez(function, interval, poly_degree=4, epsilon=0.01, precision=53, num_iter=1):
+    """ Using Remez method find an approximation polynoial of function over
+        interval whose degree is poly_defree and whose absolute error is less
+        or equal to epsilon """
     NUM_POINT = poly_degree + 1
     input_value = [cheb_extrema(NUM_POINT, i, interval) for i in range(NUM_POINT)]
     input_value = sorted(input_value)
