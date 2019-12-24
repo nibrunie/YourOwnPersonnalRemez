@@ -48,10 +48,52 @@ def get_random_interval_pt(interval):
     size = hi - lo
     return lo + size * random.random()
 
+class PolyConditionner:
+    """ Conditionning object to shape a polynomial object """
+    def get_index_list(self):
+        """ Return the ordered list of indexes of non-zero
+            polynomial coefficient """
+        raise NotImplementedError
 
-def generate_approx_cvp(function, interval, NUM_POINT=100, poly_degree=4, epsilon=0.01, precision=53):
+    def get_max_index(self):
+        """ Return the maximal index of a non-zero coefficient """
+        raise NotImplementedError
+
+    def build_poly_from_coeff_list(self, coeff_list, zero=0.0):
+        """ Build a polynomial from a sparse list of coefficients
+            assuming they are mapped to the conditionner indexes """
+        dense_list = [zero] * (self.get_max_index() + 1)
+        print(len(coeff_list), self.get_index_list(), self.get_max_index())
+        for index, value in zip(self.get_index_list(), coeff_list):
+            dense_list[index] = value
+        return Polynomial(dense_list)
+
+class PolyDegreeConditionner(PolyConditionner):
+    """ Conditionnal object to define a polynomial shape from its degree """
+    def __init__(self, poly_degree):
+        self.poly_degree = poly_degree
+
+    def get_index_list(self):
+        return list(range(self.poly_degree+1))
+    def get_max_index(self):
+        return self.poly_degree
+
+class PolyIndexListConditionner(PolyConditionner):
+    """ Conditionnal object to define a polynomial shape from a list of
+        coefficient indexes """
+    def __init__(self, poly_index_list):
+        self.poly_index_list = list(poly_index_list)
+        self.poly_degree = max(self.poly_index_list)
+    def get_index_list(self):
+        return self.poly_index_list
+    def get_max_index(self):
+        return self.poly_degree
+
+
+def generate_approx_cvp(function, interval, NUM_POINT=100, poly_conditionner=None, epsilon=0.01, precision=53):
     """ Using Closest Vector Problem, generates a polynomial approximation of
         degree  poly_degree of function over interval """
+    poly_conditionner = poly_conditionner or PolyDegreeConditionner(4)
     # point value to minimize polynomial - function distance
     # are chebyshev extrema
     input_value = [cheb_extrema(NUM_POINT, i, interval) for i in range(NUM_POINT)]
@@ -69,14 +111,16 @@ def generate_approx_cvp(function, interval, NUM_POINT=100, poly_degree=4, epsilo
     def back_conv(x):
         return x / factor
 
+    poly_index_list = poly_conditionner.get_index_list()
+    NUM_POLY_INDEX = len(poly_index_list)
 
-    matrix = fpylll.IntegerMatrix(poly_degree + 1, NUM_POINT)
-    np_matrix = np.zeros((poly_degree + 1, NUM_POINT))
+    matrix = fpylll.IntegerMatrix(NUM_POLY_INDEX, NUM_POINT)
+    np_matrix = np.zeros((NUM_POLY_INDEX, NUM_POINT))
 
     # each column contains the i-th power of the input row
     for row in range(NUM_POINT):
-        for col in range(poly_degree+1):
-            coeff = int_conv(input_value[row]**col)
+        for col, power in enumerate(poly_index_list):
+            coeff = int_conv(input_value[row]**power)
             matrix[col, row] = coeff
             np_matrix[col, row] = coeff
 
@@ -97,7 +141,7 @@ def generate_approx_cvp(function, interval, NUM_POINT=100, poly_degree=4, epsilo
 
     poly_coeff = [v for v in np.linalg.lstsq(M, b)[0]]
 
-    return Polynomial(poly_coeff)
+    return poly_conditionner.build_poly_from_coeff_list(poly_coeff)
 
 
 def generate_approx_remez(function, interval, poly_degree=4, epsilon=0.01, precision=53, num_iter=1):
@@ -246,7 +290,7 @@ def dirty_supnorm(fct, interval, min_dist=0.01, delta=0.000001):
 
 
 if __name__ == "__main__":
-    func = Function(lambda x: bigfloat.exp(x))
+    func = Function(lambda x: bigfloat.cos(x))
     interval_lo, interval_hi = 0.0, 0.03
     interval = interval_lo, interval_hi
     NUM_TEST_PTS = 10
@@ -266,8 +310,8 @@ if __name__ == "__main__":
 
 
     # generating coefficients of polynomial approximation
-    poly_cvp_1 = generate_approx_cvp(func, interval, NUM_POINT=200, precision=60, poly_degree=POLY_DEGREE)
-    poly_cvp_2 = generate_approx_cvp(func, interval, NUM_POINT=120, precision=60, poly_degree=POLY_DEGREE)
+    poly_cvp_1 = generate_approx_cvp(func, interval, NUM_POINT=200, precision=60, poly_conditionner=PolyIndexListConditionner(range(0, POLY_DEGREE+1, 2)))
+    poly_cvp_2 = generate_approx_cvp(func, interval, NUM_POINT=120, precision=60, poly_conditionner=PolyIndexListConditionner(range(0, POLY_DEGREE+1, 2)))
     print("max_diff for poly_cvp_1 is", dirty_supnorm(poly_cvp_1 - func, interval))
     print("max_diff for poly_cvp_2 is", dirty_supnorm(poly_cvp_2 - func, interval))
 
