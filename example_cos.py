@@ -18,9 +18,9 @@ if __name__ == "__main__":
     POLY_DEGREE = 8
 
     # remez method
-    poly_remez_1 = generate_approx_remez(func, interval, poly_degree=POLY_DEGREE, epsilon=1e-6)
-    poly_remez_3 = generate_approx_remez(func, interval, poly_degree=POLY_DEGREE, epsilon=1e-6, num_iter=3)
-    poly_remez_5 = generate_approx_remez(func, interval, poly_degree=POLY_DEGREE, epsilon=1e-6, num_iter=5)
+    poly_remez_1 = generate_approx_remez(func, interval, poly_conditionner=PolyIndexListConditionner(range(0, POLY_DEGREE+1, 2)), epsilon=1e-6)
+    poly_remez_3 = generate_approx_remez(func, interval, poly_conditionner=PolyIndexListConditionner(range(0, POLY_DEGREE+1, 2)), epsilon=1e-6, num_iter=3)
+    poly_remez_5 = generate_approx_remez(func, interval, poly_conditionner=PolyIndexListConditionner(range(0, POLY_DEGREE+1, 2)), epsilon=1e-6, num_iter=5)
 
     print("max_diff for remez 1 is ", dirty_supnorm(poly_remez_1 - func, interval))
     print("max_diff for remez 3 is ", dirty_supnorm(poly_remez_3 - func, interval))
@@ -54,7 +54,7 @@ if __name__ == "__main__":
     #error_y = np.array([(poly_remez_cvp - func)(v) for v in x])
 
 
-    plt.plot(x, tanh_y, label='tanh')
+    plt.plot(x, tanh_y, label='cos')
     plt.plot(x, poly_cvp_1_y, label='poly_cvp_1')
     plt.plot(x, poly_cvp_2_y, label='poly_cvp_2')
     plt.plot(x, poly_remez_1_y, label='poly_remez_1')
