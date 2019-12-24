@@ -15,7 +15,7 @@ def cheb_root(degree, index, interval=(-1, 1)):
         :param index: index of the root to be returned
         :type index: int
         :return: index-th root of the degree-th Chebyshev polynomial
-        :retype: bigfloat.BigFloat
+        :rtype: bigfloat.BigFloat
     """
     lo, hi = interval
     size = hi - lo
@@ -30,7 +30,7 @@ def cheb_extrema(degree, index, interval=(-1, 1)):
         :param index: index of the extrema to be returned
         :type index: int
         :return: index-th extrema of the degree-th Chebyshev polynomial
-        :retype: bigfloat.BigFloat
+        :rtype: bigfloat.BigFloat
     """
     lo, hi = interval
     size = hi - lo
