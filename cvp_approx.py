@@ -127,6 +127,56 @@ def generate_approx_remez(function, interval, poly_degree=4, epsilon=0.01, preci
             input_value = [interval[0]] + sorted(extremas) + [interval[1]]
     return poly
 
+def generate_approx_remez_cvp(function, interval, poly_degree=4, epsilon=0.01, precision=53, num_iter=1):
+    """ Using Remez method find an approximation polynoial of function over
+        interval whose degree is poly_defree and whose absolute error is less
+        or equal to epsilon """
+    NUM_POINT = poly_degree + 1
+    input_value = [cheb_extrema(NUM_POINT, i, interval) for i in range(NUM_POINT)]
+    input_value = sorted(input_value)
+
+    for iter_id in range(num_iter):
+        target_vector = np.asarray([function(x) + (-1)**(i) * epsilon for i, x in enumerate(input_value)], dtype='float')
+
+        min_value = min(abs(v) for v in target_vector)
+        factor = 2**precision / min_value
+        def int_conv(x):
+            return int(x * factor)
+        def back_conv(x):
+            return x / factor
+
+        fplll_matrix = fpylll.IntegerMatrix(poly_degree + 1, NUM_POINT)
+        np_matrix = np.zeros((NUM_POINT, poly_degree + 1), dtype='float')
+        for row in range(NUM_POINT):
+            for col in range(poly_degree +1):
+                # np matrix MUST be transposed wrt fplll matriix
+                np_matrix[row][col] = int_conv(input_value[row]**col)
+                fplll_matrix[col, row] = int_conv(input_value[row]**col)
+
+        reduced_matrix = fpylll.IntegerMatrix(fplll_matrix)
+
+        # reducing matrix to simplify CVP search
+        #fpylll.LLL.reduction(reduced_matrix)
+
+        conv_target = [int_conv(v) for v in target_vector]
+
+        closest_vector = fpylll.CVP.closest_vector(reduced_matrix, conv_target)
+        b = np.array(closest_vector)
+        M = np_matrix
+        #M = np_matrix.transpose()
+        poly_coeff = [v for v in np.linalg.lstsq(M, b)[0]]
+        print("remez_cvp poly_coeff=", poly_coeff)
+        #poly_coeff = [back_conv(v) for v in closest_vector]
+
+        poly = Polynomial(poly_coeff)
+        if iter_id + 1 < num_iter:
+            extremas = find_extremas(poly - func, interval, min_dist=0.0001, delta=1e-8)
+            print(input_value)
+            print(extremas)
+            input_value = [interval[0]] + sorted(extremas) + [interval[1]]
+            print(len(input_value), NUM_POINT)
+    return poly
+
 class Function:
     def __init__(self, func):
         self.func = func
@@ -196,12 +246,12 @@ def dirty_supnorm(fct, interval, min_dist=0.01, delta=0.000001):
 
 
 if __name__ == "__main__":
-    func = Function(lambda x: bigfloat.cos(x))
-    interval_lo, interval_hi = 0.0, 0.125
+    func = Function(lambda x: bigfloat.exp(x))
+    interval_lo, interval_hi = 0.0, 0.03
     interval = interval_lo, interval_hi
     NUM_TEST_PTS = 10
 
-    POLY_DEGREE = 5
+    POLY_DEGREE = 8
 
 
     # remez method
@@ -217,7 +267,7 @@ if __name__ == "__main__":
 
     # generating coefficients of polynomial approximation
     poly_cvp_1 = generate_approx_cvp(func, interval, NUM_POINT=200, precision=60, poly_degree=POLY_DEGREE)
-    poly_cvp_2 = generate_approx_cvp(func, interval, NUM_POINT=120, precision=40, poly_degree=POLY_DEGREE)
+    poly_cvp_2 = generate_approx_cvp(func, interval, NUM_POINT=120, precision=60, poly_degree=POLY_DEGREE)
     print("max_diff for poly_cvp_1 is", dirty_supnorm(poly_cvp_1 - func, interval))
     print("max_diff for poly_cvp_2 is", dirty_supnorm(poly_cvp_2 - func, interval))
 
