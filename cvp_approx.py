@@ -3,7 +3,6 @@ import random
 import fpylll
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 
 def cheb_root(degree, index, interval=(-1, 1)):
@@ -167,7 +166,7 @@ def generate_approx_remez(function, interval, poly_degree=4, epsilon=0.01, preci
 
         poly = Polynomial(poly_coeff)
         if iter_id + 1 < num_iter:
-            extremas = find_extremas(poly - func, interval, min_dist=0.0001, delta=1e-8)
+            extremas = find_extremas(poly - function, interval, min_dist=0.0001, delta=1e-8)
             input_value = [interval[0]] + sorted(extremas) + [interval[1]]
     return poly
 
@@ -287,60 +286,5 @@ def find_extremas(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
 
 def dirty_supnorm(fct, interval, min_dist=0.01, delta=0.000001):
     return max(abs(fct(v)) for v in list(interval) + find_extremas(fct, interval, min_dist=min_dist, delta=delta))
-
-
-if __name__ == "__main__":
-    func = Function(lambda x: bigfloat.cos(x))
-    interval_lo, interval_hi = 0.0, 0.03
-    interval = interval_lo, interval_hi
-    NUM_TEST_PTS = 10
-
-    POLY_DEGREE = 8
-
-
-    # remez method
-    poly_remez_1 = generate_approx_remez(func, interval, poly_degree=POLY_DEGREE, epsilon=1e-6)
-    poly_remez_3 = generate_approx_remez(func, interval, poly_degree=POLY_DEGREE, epsilon=1e-6, num_iter=3)
-    poly_remez_5 = generate_approx_remez(func, interval, poly_degree=POLY_DEGREE, epsilon=1e-6, num_iter=5)
-
-    print("max_diff for remez 1 is ", dirty_supnorm(poly_remez_1 - func, interval))
-    print("max_diff for remez 3 is ", dirty_supnorm(poly_remez_3 - func, interval))
-    print("max_diff for remez 5 is ", dirty_supnorm(poly_remez_5 - func, interval))
-
-
-
-    # generating coefficients of polynomial approximation
-    poly_cvp_1 = generate_approx_cvp(func, interval, NUM_POINT=200, precision=60, poly_conditionner=PolyIndexListConditionner(range(0, POLY_DEGREE+1, 2)))
-    poly_cvp_2 = generate_approx_cvp(func, interval, NUM_POINT=120, precision=60, poly_conditionner=PolyIndexListConditionner(range(0, POLY_DEGREE+1, 2)))
-    print("max_diff for poly_cvp_1 is", dirty_supnorm(poly_cvp_1 - func, interval))
-    print("max_diff for poly_cvp_2 is", dirty_supnorm(poly_cvp_2 - func, interval))
-
-    # graphical representation
-    fig = plt.figure()  # an empty figure with no axes
-    fig.suptitle('No axes on this figure')  # Add a title so we know which it is
-
-    x = np.linspace(interval_lo, interval_hi, 100)
-    tanh_y = np.array([func(v) for v in x])
-    poly_cvp_1_y = np.array([poly_cvp_1(v) for v in x])
-    poly_cvp_2_y = np.array([poly_cvp_2(v) for v in x])
-    poly_remez_1_y = np.array([poly_remez_1(v) for v in x])
-    poly_remez_3_y = np.array([poly_remez_3(v) for v in x])
-    poly_remez_5_y = np.array([poly_remez_5(v) for v in x])
-
-
-    plt.plot(x, tanh_y, label='tanh')
-    plt.plot(x, poly_cvp_1_y, label='poly_cvp_1')
-    plt.plot(x, poly_cvp_2_y, label='poly_cvp_2')
-    plt.plot(x, poly_remez_1_y, label='poly_remez_1')
-    plt.plot(x, poly_remez_3_y, label='poly_remez_3')
-    plt.plot(x, poly_remez_5_y, label='poly_remez_5')
-    # plt.plot(x, error_y, label='error')
-
-    plt.title("Simple Plot")
-
-    plt.legend()
-
-    plt.show()
-
 
 
