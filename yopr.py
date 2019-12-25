@@ -24,14 +24,14 @@ if __name__ == "__main__":
                        default=(0,1.0), type=(lambda s: [float(v) for v in s.split(',')]),
                         help='approximation interval')
     parser.add_argument("--epsilon", action="store",
-                       default=1e-6,
+                       default=1e-6, type=float,
                        help="target error")
     parser.add_argument("--plot", action="store_const", default=False, const="True",
                         help="plot function and approximation")
     parser.add_argument("--plot-error", action="store_const", default=False, const="True",
                         help="plot error")
     parser.add_argument('--degree', action='store',
-                        default=4,
+                        default=4, type=int,
                         help='polynomial degree')
     parser.add_argument('--num-iter', action='store',
                         default=1,
