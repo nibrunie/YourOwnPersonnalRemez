@@ -173,8 +173,14 @@ def generate_approx_remez(function, interval, poly_conditionner=None, epsilon=0.
 
         poly = poly_conditionner.build_poly_from_coeff_list(poly_coeff)
         if iter_id + 1 < num_iter:
-            extremas = find_extremas(poly - function, interval, min_dist=0.0001, delta=1e-8)
+            extremas = find_extremas(poly - function, interval, min_dist=0.0001, delta=epsilon*0.01)
+            # adding range bounds as extrema only works if they were not already
+            # in the extremas list
+            # extremas list size must be equal to NUM_POINT for the linear solver to work
             input_value = [interval[0]] + sorted(extremas) + [interval[1]]
+            if len(input_value) != NUM_POINT:
+                print("Warning: {} extrem(um/a) found, expected {} pt(s)".format(len(input_value), NUM_POINT))
+
     return poly
 
 def generate_approx_remez_cvp(function, interval, poly_degree=4, epsilon=0.01, precision=53, num_iter=1):
