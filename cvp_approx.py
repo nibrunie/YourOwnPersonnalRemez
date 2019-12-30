@@ -62,7 +62,6 @@ class PolyConditionner:
         """ Build a polynomial from a sparse list of coefficients
             assuming they are mapped to the conditionner indexes """
         dense_list = [zero] * (self.get_max_index() + 1)
-        print(len(coeff_list), self.get_index_list(), self.get_max_index())
         for index, value in zip(self.get_index_list(), coeff_list):
             dense_list[index] = value
         return Polynomial(dense_list)
@@ -171,7 +170,6 @@ def generate_approx_remez(function, interval, poly_conditionner=None, epsilon=0.
         else:
             lstsq_solution = np.linalg.lstsq(np_matrix, target_vector)
         poly_coeff = [v for v in lstsq_solution]
-        print("remez poly_coeff=", poly_coeff)
 
         poly = poly_conditionner.build_poly_from_coeff_list(poly_coeff)
         if iter_id + 1 < num_iter:
