@@ -35,6 +35,7 @@ if __name__ == "__main__":
                         help='polynomial degree')
     parser.add_argument('--num-iter', action='store',
                         default=1,
+                        type=int,
                         help='number of iteration (for iterative methods)')
     parser.add_argument('--num-pts', action='store',
                         default=100,
