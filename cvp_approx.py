@@ -251,8 +251,12 @@ class Function:
         return Function(lambda x: (self(x+u) - self(x)) / u)
 
 class Polynomial(Function):
+    """ Abstract of polynomial shape function """
     def __init__(self, coeff_vector):
         self.coeff_vector = coeff_vector
+
+    def __str__(self):
+        return " + ".join("{:.5f}.X**{}".format(coeff, i) for i, coeff in enumerate(self.coeff_vector))
 
     def eval(self, x):
         """ Evaluate polynomial defined by poly_coeff list of
@@ -269,11 +273,16 @@ class Polynomial(Function):
         return Polynomial([v * (i + 1) for i, v in enumerate(self.coeff_vector[1:])])
 
 def eval_poly_vs_fct(poly, function, test_values):
+    """ Compute the maximum absolute difference between <poly> and
+        <function> evaluated at each point in <test_values> vector """
     diff = max(abs(poly(v) - function(v)) for v in test_values)
     return diff
 
 
 def find_zeros(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
+    """ Find the zeros of function <fct> within range <interval>
+        <min_dist> is the minimal distance between 2 points
+        <delta> is the maximal approximation of zero accepted """
     start_u = min_dist
     lo, hi = interval
     size = hi - lo
