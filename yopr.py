@@ -72,6 +72,7 @@ if __name__ == "__main__":
     else:
         raise NotImplementedError
 
+    print("poly is {}".format(poly))
     # error
     max_diff = dirty_supnorm(poly - func, interval)
     print("max absolute diff is ", max_diff)
