@@ -36,10 +36,10 @@ if __name__ == "__main__":
     parser.add_argument('--num-iter', action='store',
                         default=1,
                         type=int,
-                        help='number of iteration (for iterative methods)')
+                        help='number of iteration (for remez methods)')
     parser.add_argument('--num-pts', action='store',
                         default=100,
-                        help='number of iteration (for iterative methods)')
+                        help='number of points (for cvp methods)')
     parser.add_argument('--precision', action='store',
                         default=60,
                         help='precision')
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     if args.method == "remez":
         poly = generate_approx_remez(func, interval, poly_conditioner, args.epsilon, num_iter=args.num_iter)
     elif args.method == "remez_cvp":
-        pass
+        raise NotImplementedError
     elif args.method == "cvp":
         poly = generate_approx_cvp(func, interval, NUM_POINT=args.num_pts, precision=args.precision, poly_conditionner=poly_conditioner)
     else:

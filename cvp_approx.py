@@ -256,7 +256,7 @@ class Polynomial(Function):
         self.coeff_vector = coeff_vector
 
     def __str__(self):
-        return " + ".join("{:.5f}.X**{}".format(coeff, i) for i, coeff in enumerate(self.coeff_vector))
+        return " + ".join("{:.5f} * X**{}".format(coeff, i) for i, coeff in enumerate(self.coeff_vector))
 
     def eval(self, x):
         """ Evaluate polynomial defined by poly_coeff list of
