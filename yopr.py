@@ -3,6 +3,7 @@ import bigfloat
 import argparse
 import numpy as np
 import matplotlib.pyplot as plt
+import json
 
 
 from cvp_approx import (
@@ -49,6 +50,9 @@ if __name__ == "__main__":
     parser.add_argument('--index-list', action='store',
                         default=None, type=(lambda s: [int(v) for v in s.split(',')]),
                         help='polynomial coefficient index list (overloads degree)')
+    parser.add_argument('--dump-axf-approx', action='store',
+                        default=None, type=str,
+                        help='if set dump approximation in output file in AXF format')
 
     args = parser.parse_args(sys.argv[1:])
 
@@ -65,6 +69,7 @@ if __name__ == "__main__":
 
     if args.method == "remez":
         poly = generate_approx_remez(func, interval, poly_conditioner, args.epsilon, num_iter=args.num_iter)
+
     elif args.method == "remez_cvp":
         raise NotImplementedError
     elif args.method == "cvp":
@@ -76,6 +81,36 @@ if __name__ == "__main__":
     # error
     max_diff = dirty_supnorm(poly - func, interval)
     print("max absolute diff is ", max_diff)
+
+    if args.dump_axf_approx:
+        with open(args.dump_axf_approx, "w") as out_stream:
+            axf_dict = {
+                "bound_high": str(interval[1]),
+                "bound_low": str(interval[0]),
+                "class": "!PieceWiseApprox",
+                # TODO/FIXME: only an estimation, not a true error bound
+                "error_bound": str(max_diff),
+                "even": False,
+                "odd": False,
+                "max_degree": poly_conditioner.get_max_index(),
+                "num_intervals": 1,
+                "precision": "float", # TODO/FIXME
+                "tag": "",
+                "approx_list": {
+                    "absolute": True,
+                    # TODO/FIXME: only an estimation, not a true error bound
+                    "approx_error": str(max_diff),
+                    "class": "!SimplePolyApprox",
+                    "degree_list": poly_conditioner.get_index_list(),
+                    "format_list": ["float"] * len(poly_conditioner.get_index_list()),
+                    "function": str(func),
+                    "interval": "[{};{}]".format(interval[0], interval[1]),
+                    "poly": {
+						("%d" % i): str(c) for i, c in enumerate(poly.coeff_vector) 
+                    }
+                }
+            }
+            out_stream.write(json.dumps([axf_dict], sort_keys=True, indent=4))
 
     if args.plot or args.plot_error:
         # graphical representation
