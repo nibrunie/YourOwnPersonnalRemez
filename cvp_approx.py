@@ -144,8 +144,8 @@ def generate_approx_cvp(function, interval, NUM_POINT=100, poly_conditionner=Non
 
 def generate_approx_remez(function, interval, poly_conditionner=None, epsilon=0.01, precision=53, num_iter=1):
     """ Using Remez method find an approximation polynoial of function over
-        interval whose degree is poly_defree and whose absolute error is less
-        or equal to epsilon """
+        interval whose degree is poly_degree and whose absolute error is 
+        less than or equal to epsilon """
     poly_conditionner = poly_conditionner or PolyDegreeConditionner(4)
     poly_degree = poly_conditionner.get_max_index()
     poly_index_list = poly_conditionner.get_index_list()
@@ -303,6 +303,7 @@ def find_zeros(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
     return zeros
 
 def find_extremas(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
+    """ look for the extrema values of function <fct> over <interval> """
     derivative = fct.derivate()
     return find_zeros(derivative, interval, start_pts, min_dist, delta)
 
