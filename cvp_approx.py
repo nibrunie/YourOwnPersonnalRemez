@@ -265,8 +265,11 @@ class Polynomial(Function):
         """ Evaluate polynomial defined by poly_coeff list of
             coefficient numerical value at value """
         acc = 0
+        # using local-power to optimize bigfloat.pow computation
+        local_power = 1
         for i, c in enumerate(self.coeff_vector):
-            acc += c * x**i
+            acc += c * local_power
+            local_power *= x
         return acc
 
     def __call__(self, x, precision=100):
