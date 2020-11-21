@@ -237,8 +237,9 @@ class Function:
     def __init__(self, func):
         self.func = func
 
-    def __call__(self, x):
-        return self.func(x)
+    def __call__(self, x, precision=100):
+        with bigfloat.precision(precision):
+            return self.func(bigfloat.BigFloat(x))
 
     def __sub__(self, func):
         return Function(lambda x: (self(x) - func(x)))
@@ -247,16 +248,18 @@ class Function:
     def __abs__(self):
         return Function(lambda x: (abs(self(x))))
 
-    def derivate(self, u=0.0001):
-        return Function(lambda x: (self(x+u) - self(x)) / u)
+    def derivate(self, u=1e-4):
+        return Function(lambda x: (self(x+u*abs(x)) - self(x)) / (u*abs(x)))
 
 class Polynomial(Function):
     """ Abstract of polynomial shape function """
     def __init__(self, coeff_vector):
-        self.coeff_vector = coeff_vector
+        self.coeff_vector = [bigfloat.BigFloat(c) for c in coeff_vector]
 
     def __str__(self):
-        return " + ".join("{:.5f} * X**{}".format(coeff, i) for i, coeff in enumerate(self.coeff_vector))
+        # TODO/FIXME: new version of bigfloat.BigFloat __format__ should
+        # directly support '{:a}' format for hexa display
+        return " + ".join("{} * X**{}".format(coeff.hex(), i) for i, coeff in enumerate(self.coeff_vector))
 
     def eval(self, x):
         """ Evaluate polynomial defined by poly_coeff list of
@@ -266,8 +269,9 @@ class Polynomial(Function):
             acc += c * x**i
         return acc
 
-    def __call__(self, x):
-        return self.eval(x)
+    def __call__(self, x, precision=100):
+        with bigfloat.precision(precision):
+            return self.eval(x)
 
     def derivate(self, u = None):
         return Polynomial([v * (i + 1) for i, v in enumerate(self.coeff_vector[1:])])
@@ -278,6 +282,10 @@ def eval_poly_vs_fct(poly, function, test_values):
     diff = max(abs(poly(v) - function(v)) for v in test_values)
     return diff
 
+class Interval:
+    def __init__(self, low_bound, high_bound):
+        self.low_bound = low_bound
+        self.high_bound = high_bound
 
 def find_zeros(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
     """ Find the zeros of function <fct> within range <interval>
@@ -290,16 +298,32 @@ def find_zeros(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
     zeros = []
     while x <= hi:
         u = start_u
-        while abs(fct(x)) > delta and x < hi:
-            if fct(x+u) * fct(x) < 0:
-                # opposite sign means at least one zero in between
+        local_zero = None
+        # (x + u) > x is a forward progress predicate, if u becomes
+        # so small that x + u is no longer different from x, then the processing
+        # will enter an infinite loop
+        # TODO/FIXME: this only work is u's precision is finite
+        # (e.g. binary32 or binary64) and will loop almost infinitely is x+u is
+        # computed in multi-precision
+        while abs(fct(x)) > delta and x < hi and (x + u) > x:
+            if fct(x+u) * fct(x) <= 0:
+                # opposite sign means there is at least one zero in between
                 # because we assume fct is contiguous
+                local_zero = Interval(x, x+u)
                 u /= 2.0
             else:
+                if not local_zero is None:
+                    # if a zero candidate interval was already found,
+                    # we need to update it.
+                    # as both fct(x) and fct(x+u) have the same sign, we
+                    # can exclude [x;x+u] from the interval of the zero candidate
+                    local_zero = Interval(x+u, local_zero.high_bound)
                 x += u
-        if abs(fct(x)) < delta:
-            zeros.append(x)
-        x += start_u
+        if not local_zero is None:
+            zeros.append(local_zero.low_bound)
+            x = local_zero.high_bound
+        else:
+            x += start_u
     return zeros
 
 def find_extremas(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
