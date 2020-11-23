@@ -308,11 +308,14 @@ def find_zeros(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
         # TODO/FIXME: this only work is u's precision is finite
         # (e.g. binary32 or binary64) and will loop almost infinitely is x+u is
         # computed in multi-precision
-        while abs(fct(x)) > delta and x < hi and (x + u) > x:
-            if fct(x+u) * fct(x) <= 0:
+        fct_x = fct(x)
+        xpu = x + u
+        while abs(fct_x) > delta and x < hi and (xpu) > x:
+            fct_xpu = fct(xpu)
+            if fct_xpu * fct_x <= 0:
                 # opposite sign means there is at least one zero in between
                 # because we assume fct is contiguous
-                local_zero = Interval(x, x+u)
+                local_zero = Interval(x, xpu)
                 u /= 2.0
             else:
                 if not local_zero is None:
@@ -320,8 +323,10 @@ def find_zeros(fct, interval, start_pts=None, min_dist=0.01, delta=0.00001):
                     # we need to update it.
                     # as both fct(x) and fct(x+u) have the same sign, we
                     # can exclude [x;x+u] from the interval of the zero candidate
-                    local_zero = Interval(x+u, local_zero.high_bound)
-                x += u
+                    local_zero = Interval(xpu, local_zero.high_bound)
+                x = xpu
+                fct_x = fct_xpu
+            xpu = x + u
         if not local_zero is None:
             zeros.append(local_zero.low_bound)
             x = local_zero.high_bound
