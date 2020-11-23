@@ -144,7 +144,7 @@ def generate_approx_cvp(function, interval, NUM_POINT=100, poly_conditionner=Non
 
 def generate_approx_remez(function, interval, poly_conditionner=None, epsilon=0.01, precision=53, num_iter=1):
     """ Using Remez method find an approximation polynoial of function over
-        interval whose degree is poly_degree and whose absolute error is 
+        interval whose degree is poly_degree and whose absolute error is
         less than or equal to epsilon """
     poly_conditionner = poly_conditionner or PolyDegreeConditionner(4)
     poly_degree = poly_conditionner.get_max_index()
@@ -234,10 +234,13 @@ def generate_approx_remez_cvp(function, interval, poly_degree=4, epsilon=0.01, p
     return poly
 
 class Function:
+    """ numerical function object """
     def __init__(self, func):
         self.func = func
 
     def __call__(self, x, precision=100):
+        """ evaluate <self> function at input <x> with <precision> bits of
+            accuracy """
         with bigfloat.precision(precision):
             return self.func(bigfloat.BigFloat(x))
 
@@ -249,6 +252,7 @@ class Function:
         return Function(lambda x: (abs(self(x))))
 
     def derivate(self, u=1e-4):
+        """ return the derivate of <self> as a Function object """
         return Function(lambda x: (self(x+u*abs(x)) - self(x)) / (u*abs(x)))
 
 class Polynomial(Function):
