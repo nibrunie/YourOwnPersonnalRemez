@@ -11,6 +11,7 @@ from cvp_approx import (
     PolyIndexListConditionner, PolyDegreeConditionner,
     dirty_supnorm,
     generate_approx_remez, generate_approx_cvp,
+    generate_approx_remez_mpmath,
     generate_approx_remez_cvp)
 
 if __name__ == "__main__":
@@ -19,7 +20,7 @@ if __name__ == "__main__":
                         default=bigfloat.tanh, type=(lambda s: eval(s, globals())),
                         help='function to approximate')
     parser.add_argument('--method', action='store',
-                        default="remez", choices=["remez", "cvp", "remez_cvp"],
+                        default="remez", choices=["remez", "cvp", "remez_cvp", "remez_mp"],
                         help='method for the approximation')
     parser.add_argument("--interval", action="store",
                        default=(0,1.0), type=(lambda s: [float(v) for v in s.split(',')]),
@@ -69,6 +70,8 @@ if __name__ == "__main__":
 
     if args.method == "remez":
         poly = generate_approx_remez(func, interval, poly_conditioner, args.epsilon, num_iter=args.num_iter)
+    elif args.method == "remez_mp":
+        poly = generate_approx_remez_mpmath(func, interval, poly_conditioner, args.epsilon, num_iter=args.num_iter)
 
     elif args.method == "remez_cvp":
         raise NotImplementedError

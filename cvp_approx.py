@@ -3,6 +3,7 @@ import random
 import fpylll
 
 import numpy as np
+from mpmath import mp
 
 
 def cheb_root(degree, index, interval=(-1, 1)):
@@ -159,7 +160,6 @@ def generate_approx_remez(function, interval, poly_conditionner=None, epsilon=0.
         target_vector = np.asarray([function(x) + (-1)**(i+1) * epsilon for i, x in enumerate(input_value)], dtype='float')
 
         # current problem definition is using float or exact values
-
         np_matrix = np.zeros((NUM_POINT, POLY_SIZE), dtype='float')
         for row in range(NUM_POINT):
             for col, power in enumerate(poly_index_list):
@@ -173,19 +173,122 @@ def generate_approx_remez(function, interval, poly_conditionner=None, epsilon=0.
 
         poly = poly_conditionner.build_poly_from_coeff_list(poly_coeff)
         if iter_id + 1 < num_iter:
-            extremas = find_extremas(poly - function, interval, min_dist=0.0001, delta=epsilon*0.01)
+            extremas = find_extremas(poly - function, interval, min_dist=0.001, delta=epsilon*0.01)
+            min_extrema = min([abs((poly - function)(e)) for e in extremas])
+            # updating epsilon (theorem La Vallee Poussin)
+            epsilon = min_extrema
             # adding range bounds as extrema only works if they were not already
             # in the extremas list
             # extremas list size must be equal to NUM_POINT for the linear solver to work
             input_value = [interval[0]] + sorted(extremas) + [interval[1]]
             if len(input_value) != NUM_POINT:
+                print(POLY_SIZE, poly_degree + 1)
                 print("Warning: {} extrem(um/a) found, expected {} pt(s)".format(len(input_value), NUM_POINT))
+        import matplotlib.pyplot as plt
+        fig = plt.figure()  # an empty figure with no axes
+        fig.suptitle('Subtitle')  # Add a title so we know which it is
+
+        NUM_PLOT_PTS = 100
+        x = np.linspace(interval[0], interval[1], NUM_PLOT_PTS)
+
+        if False:
+            func_y = np.array([function(v) for v in x])
+            poly_y = np.array([poly(v) for v in x])
+            plt.plot(x, func_y, label='func')
+            plt.plot(x, poly_y, label='poly')
+        else:
+            error_y = np.array([(poly - function)(v) for v in x])
+            plt.plot(x, error_y, label='error')
+
+        plt.title("Simple Plot")
+        plt.legend()
+        plt.show()
 
     return poly
 
+def bf_to_mp(v, prec=100):
+    """ Dummy conversion (using str) from bigfloat.BigFloat to mpmath.mp.mpf """
+    # TODO/FIXME: optimize conversion (use mpmath for function eval or find
+    #             a more efficient way to convert from a number object to the other
+    mp.prec = prec
+    return mp.mpf(str(v))
+
+def mp_to_bf(v, prec=100):
+    """ Dummy conversion (using str) from bigfloat.BigFloat to mpmath.mp.mpf """
+    # TODO/FIXME: optimize conversion (use mpmath for function eval or find
+    #             a more efficient way to convert from a number object to the other
+    with bigfloat.Context(precision=prec):
+        return bigfloat.BigFloat(str(v))
+
+def generate_approx_remez_mpmath(function, interval, poly_conditionner=None, epsilon=0.01, precision=53, num_iter=1):
+    """ Using Remez method find an approximation polynoial of function over
+        interval whose degree is poly_degree and whose absolute error is
+        less than or equal to epsilon """
+    poly_conditionner = poly_conditionner or PolyDegreeConditionner(4)
+    poly_degree = poly_conditionner.get_max_index()
+    poly_index_list = poly_conditionner.get_index_list()
+    POLY_SIZE = len(poly_index_list)
+
+    NUM_POINT = poly_degree + 1
+    input_value = [(cheb_extrema(NUM_POINT, i, interval)) for i in range(NUM_POINT)]
+    input_value = sorted(input_value)
+
+        
+
+    for iter_id in range(num_iter):
+        target_vector = mp.matrix([bf_to_mp(function(x) + (-1)**(i+1) * epsilon) for i, x in enumerate(input_value)])
+
+        # current problem definition is using float or exact values
+        np_matrix = mp.zeros(NUM_POINT, POLY_SIZE)
+        for row in range(NUM_POINT):
+            for col, power in enumerate(poly_index_list):
+                np_matrix[row,col] = bf_to_mp(input_value[row]**power)
+
+        if POLY_SIZE == poly_degree + 1:
+            lstsq_solution = mp.lu_solve(np_matrix, target_vector)
+        else:
+            raise NotImplementedError
+        poly_coeff = [mp_to_bf(v) for v in lstsq_solution]
+
+        poly = poly_conditionner.build_poly_from_coeff_list(poly_coeff)
+        if iter_id + 1 < num_iter:
+            extremas = find_extremas(poly - function, interval, min_dist=0.001, delta=epsilon*0.01)
+            min_extrema = min([abs((poly - function)(e)) for e in extremas])
+            # updating epsilon (theorem La Vallee Poussin)
+            epsilon = min_extrema
+            # adding range bounds as extrema only works if they were not already
+            # in the extremas list
+            # extremas list size must be equal to NUM_POINT for the linear solver to work
+            input_value = [interval[0]] + sorted(extremas) + [interval[1]]
+            if len(input_value) != NUM_POINT:
+                print(POLY_SIZE, poly_degree + 1)
+                print("Warning: {} extrem(um/a) found, expected {} pt(s)".format(len(input_value), NUM_POINT))
+        import matplotlib.pyplot as plt
+        fig = plt.figure()  # an empty figure with no axes
+        fig.suptitle('Subtitle')  # Add a title so we know which it is
+
+        NUM_PLOT_PTS = 100
+        x = np.linspace(interval[0], interval[1], NUM_PLOT_PTS)
+
+        if False:
+            func_y = np.array([function(v) for v in x])
+            poly_y = np.array([poly(v) for v in x])
+            plt.plot(x, func_y, label='func')
+            plt.plot(x, poly_y, label='poly')
+        else:
+            error_y = np.array([(poly - function)(v) for v in x])
+            plt.plot(x, error_y, label='error')
+
+        plt.title("Simple Plot")
+        plt.legend()
+        plt.show()
+
+    return poly
+
+
 def generate_approx_remez_cvp(function, interval, poly_degree=4, epsilon=0.01, precision=53, num_iter=1):
     """ Using Remez method find an approximation polynoial of function over
-        interval whose degree is poly_defree and whose absolute error is less
+        interval whose degree is poly_degree and whose absolute error is less
         or equal to epsilon """
     NUM_POINT = poly_degree + 1
     input_value = [cheb_extrema(NUM_POINT, i, interval) for i in range(NUM_POINT)]

@@ -3,3 +3,4 @@ matplotlib
 bigfloat
 fpylll
 json
+mpmath
